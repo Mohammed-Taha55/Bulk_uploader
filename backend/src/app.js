@@ -14,7 +14,7 @@ app.use(helmet());
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',')
-  .map(s => s.trim())
+  .map(s => s.trim().replace(/\/$/, ''))
   .filter(Boolean);
 
 app.use(cors({
