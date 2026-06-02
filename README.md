@@ -1,127 +1,112 @@
-# Bulk Mailer POC
+# Bulk Mailer POC (Mailing & Campaigns Module)
 
-A module for managing **senders** and **recipients** in bulk via CSV / Excel file uploads.
-Built as a POC before integration into Jobbie.
+A production-ready Proof of Concept (POC) for managing bulk email delivery campaigns. It parses uploaded recipient files (CSV/Excel), verifies their formats, lets you compose HTML/plain-text emails, and coordinates sending using the **Resend API**. It also logs full campaign history and provides individual and bulk deletion options.
 
-**Stack:** Node.js + Express + Supabase (backend) · React + Vite (frontend)
+**Stack:** Node.js + Express + Supabase (backend) · React + Vite + Vanilla CSS (frontend) · Resend SDK (email delivery)
 
 ---
 
-## Quick Start
+## Features
 
-### 1. Run the SQL Migration in Supabase
+1. **Recipients File Parsing**: Upload `.csv`, `.xlsx`, or `.xls` files. It automatically maps fields case-insensitively (e.g. `email`, `name`, `first name`).
+2. **Interactive Preview**: Preview parsed valid recipient addresses and errors (e.g. invalid formats, duplicate rows) in real-time before sending.
+3. **Fixed Sender**: Utilizes a locked, secure sender profile pulled from the environment configuration to prevent sender spoofing.
+4. **Rich Compose**: Supports writing Subject, HTML content, and a custom `Reply-To` address.
+5. **Rate-limited Batching**: Sends emails in self-throttled, rate-limited batches with intelligent delay and automatic retry fallback on `429 Too Many Requests` status to comply with Resend's free tier policy.
+6. **Campaign Analytics & History**: Logs all sent campaigns in a Supabase Postgres table (`mail_logs`), showcasing delivery success metrics (total sent, failed, per-recipient message ID, error logs).
+7. **Clean Management**: Provides a UI modal confirmation to delete single campaigns or clean the entire history.
 
-1. Go to your Supabase project → **SQL Editor** → **New Query**
-2. Paste the contents of [`backend/migrations/001_initial.sql`](backend/migrations/001_initial.sql)
-3. Click **Run**
+---
 
-### 2. Configure the Backend
+## Quick Start (Local Setup)
+
+### 1. Database Setup (Supabase)
+
+1. Log in to your **Supabase Dashboard** and open your project.
+2. Go to **SQL Editor** → **New Query**.
+3. Copy and run the initial migration: [`backend/migrations/001_initial.sql`](backend/migrations/001_initial.sql).
+4. Create a second new query, copy and run the mailing migration: [`backend/migrations/002_mail_logs.sql`](backend/migrations/002_mail_logs.sql).
+
+### 2. Configure Backend Environment
+
+Copy the environment example and create a `.env` file in the `backend` folder:
 
 ```bash
 cd backend
 cp .env.example .env
 ```
 
-Edit `.env` and fill in:
+Edit your `backend/.env` file and supply your credentials:
 
-```
+```ini
+PORT=3001
+NODE_ENV=development
+
+# Supabase Credentials (from Project Settings -> API)
 SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key-here
+
+# Resend API configuration (from resend.com)
+RESEND_API_KEY=re_your_api_key_here
+
+# Verified Sender Identity (Must be verified in Resend dashboard)
+MAIL_FROM_NAME="Mohammed Taha"
+MAIL_FROM_EMAIL="hello@yourverifieddomain.online"
 ```
 
-> **Where to find these:**  
-> Supabase Dashboard → Project Settings → API → Project URL + service_role key
-
-### 3. Install & Run the Backend
+### 3. Run the Backend Server
 
 ```bash
 cd backend
 npm install
 npm run dev
-# → API running at http://localhost:3001
-# → Health check: http://localhost:3001/api/health
+# Running at http://localhost:3001
+# Health endpoint: http://localhost:3001/api/health
 ```
 
-### 4. Install & Run the Frontend
+### 4. Run the Frontend Client
+
+Open a new terminal session:
 
 ```bash
 cd frontend
 npm install
 npm run dev
-# → App running at http://localhost:5173
+# Running at http://localhost:5173
 ```
+
+Visit `http://localhost:5173` in your browser.
 
 ---
 
 ## CSV / Excel Column Reference
 
-### Senders
-| Column (flexible aliases) | Required | Notes |
-|---|---|---|
-| `email` | ✅ | Also: `from`, `sender email`, `email address` |
-| `name` | ✅ | Also: `sender name`, `display name`, `full name` |
-| `reply_to` | ❌ | Also: `reply to`, `replyto` |
+The mailing list supports flexible column header mapping:
 
-### Recipients
-| Column (flexible aliases) | Required | Notes |
+| Target Column | Required | Allowed Header Names (Case-Insensitive) |
 |---|---|---|
-| `email` | ✅ | Also: `email address`, `e-mail` |
-| `name` | ❌ | Also: `full name`, `recipient name` |
-| `tags` | ❌ | Comma/semicolon-separated. Also: `segment`, `list`, `group` |
-| *any other column* | ❌ | Stored in `metadata` jsonb field |
-
-> Column matching is **case-insensitive** and trims whitespace.
+| **email** | ✅ | `email`, `e-mail`, `email address`, `recipient email` |
+| **name** | ❌ | `name`, `full name`, `first name`, `recipient name` |
 
 ---
 
-## API Reference
+## Production Deployment
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/health` | DB ping + uptime |
-| `POST` | `/api/senders/upload` | Upload senders CSV/Excel (`multipart/form-data`, field: `file`) |
-| `GET` | `/api/senders` | List senders (`?page=1&limit=50&status=active`) |
-| `DELETE` | `/api/senders/:id` | Soft-delete (sets status → inactive) |
-| `POST` | `/api/recipients/upload` | Upload recipients CSV/Excel |
-| `GET` | `/api/recipients` | List recipients (`?page&limit&status&tag`) |
-| `PATCH` | `/api/recipients/:id/status` | Update status (`{ "status": "unsubscribed" }`) |
-| `GET` | `/api/upload-logs` | List all upload logs |
-| `GET` | `/api/upload-logs/:id` | Get log with full error details |
+This project is optimized and ready for production deployment using **Render** (backend) and **Vercel** (frontend).
 
-### Upload Response Format
+### Deploying the Backend to Render
+A [`render.yaml`](render.yaml) file is included in the project root.
+1. Connect your repository to Render.
+2. Select **Blueprints** and create an instance.
+3. Fill in the environment variables when prompted (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`).
+4. Set `CORS_ORIGIN` to your Vercel frontend URL once deployed to authorize API requests.
 
-```json
-{
-  "success": true,
-  "message": "Upload complete: 80 inserted, 15 updated, 5 error(s).",
-  "summary": { "total": 100, "inserted": 80, "updated": 15, "skipped": 0, "errors": 5 },
-  "errors": [
-    { "row": 3, "email": "bad@", "reason": "Invalid email format: \"bad@\"" }
-  ],
-  "logId": "uuid"
-}
-```
-
----
-
-## Error Handling
-
-The backend collects errors at every level:
-
-| Layer | Example | Behavior |
-|---|---|---|
-| File level | Wrong extension, empty file, >5 MB | `400` immediately, nothing saved |
-| Parse level | Corrupted Excel, no header row | `400` immediately |
-| Row level | Invalid email, name too long, intra-file duplicate | Row skipped, error recorded, rest imported |
-| DB level | Constraint violation, network timeout | Row-by-row fallback, error recorded per row |
-
-Errors never stop a valid partial import.
-
----
-
-## Adding a Mail Provider (later)
-
-Edit [`backend/src/services/mailService.js`](backend/src/services/mailService.js) — the `send()` method interface is already defined. No other files need changing.
+### Deploying the Frontend to Vercel
+A [`vercel.json`](frontend/vercel.json) is included in the `frontend` folder to handle SPA routing correctly.
+1. Deploy the `frontend` subfolder to Vercel.
+2. Set the environment variable:
+   - `VITE_API_BASE_URL` = `https://your-backend-render-domain.onrender.com/api`
+3. Vercel will build and host your web application.
 
 ---
 
@@ -130,19 +115,27 @@ Edit [`backend/src/services/mailService.js`](backend/src/services/mailService.js
 ```
 Bulk_uploader/
 ├── backend/
-│   ├── migrations/001_initial.sql
+│   ├── migrations/
+│   │   ├── 001_initial.sql
+│   │   └── 002_mail_logs.sql
 │   ├── src/
 │   │   ├── config/          supabase.js, constants.js
-│   │   ├── utils/           ApiError, validators, columnMapper, chunker, logger
+│   │   ├── controllers/     mailingController.js
 │   │   ├── middlewares/     errorHandler, rateLimiter, uploadMiddleware
-│   │   ├── services/        fileParser, senderService, recipientService, uploadLogService, mailService
-│   │   ├── controllers/     senderController, recipientController, uploadLogController
-│   │   ├── routes/          index, senders, recipients, uploadLogs, health
-│   │   └── app.js
-│   └── server.js
+│   │   ├── routes/          index.js, mailing.js, health.js
+│   │   ├── services/        fileParser.js, mailService.js
+│   │   └── utils/           ApiError.js, validators.js, columnMapper.js, logger.js
+│   ├── server.js
+│   └── package.json
 └── frontend/
-    └── src/
-        ├── api/             client, senders, recipients, uploadLogs
-        ├── components/      NavBar, FileUploader, UploadResult, StatusBadge, Pagination
-        └── pages/           SendersPage, RecipientsPage, UploadLogsPage
+    ├── src/
+    │   ├── api/             client.js, mailing.js
+    │   ├── components/      NavBar.jsx, FileUploader.jsx, Pagination.jsx
+    │   ├── pages/           MailingPage.jsx, CampaignsPage.jsx
+    │   ├── index.css
+    │   ├── App.jsx
+    │   └── main.jsx
+    ├── vercel.json
+    ├── vite.config.js
+    └── package.json
 ```

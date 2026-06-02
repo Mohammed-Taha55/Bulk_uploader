@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: bulk-mailer-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: Mohammed Taha
+      - key: MAIL_FROM_EMAIL
+        value: hello@tahaa.online
+      - key: CORS_ORIGIN
+        sync: false
