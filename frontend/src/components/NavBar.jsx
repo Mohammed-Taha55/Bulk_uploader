@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Send, Users, ClipboardList, Mail } from 'lucide-react';
+import { Mail, MailOpen, ClipboardList } from 'lucide-react';
 
 export default function NavBar() {
   return (
@@ -19,29 +19,20 @@ export default function NavBar() {
         <ul className="navbar-links">
           <li>
             <NavLink
-              to="/senders"
+              to="/mailing"
               className={({ isActive }) => isActive ? 'active' : ''}
             >
-              <Send size={14} strokeWidth={2} className="nav-icon" />
-              Senders
+              <MailOpen size={14} strokeWidth={2} className="nav-icon" />
+              Mailing
             </NavLink>
           </li>
           <li>
             <NavLink
-              to="/recipients"
-              className={({ isActive }) => isActive ? 'active' : ''}
-            >
-              <Users size={14} strokeWidth={2} className="nav-icon" />
-              Recipients
-            </NavLink>
-          </li>
-          <li>
-            <NavLink
-              to="/logs"
+              to="/campaigns"
               className={({ isActive }) => isActive ? 'active' : ''}
             >
               <ClipboardList size={14} strokeWidth={2} className="nav-icon" />
-              Upload Logs
+              Campaigns
             </NavLink>
           </li>
         </ul>

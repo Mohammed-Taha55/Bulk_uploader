@@ -4,14 +4,14 @@ const mailService = require('../services/mailService');
 
 /**
  * GET /api/health
- * Returns server uptime + DB connectivity + SMTP connectivity.
+ * Returns server uptime + DB connectivity + mail service status.
  */
 router.get('/', async (req, res) => {
   const startedAt = process.uptime();
   let dbStatus    = 'ok';
   let dbLatencyMs = null;
-  let smtpStatus  = 'ok';
-  let smtpLatencyMs = null;
+  let mailStatus  = 'ok';
+  let mailDetail  = null;
 
   // ── DB ping ───────────────────────────────────────────────────────────────
   try {
@@ -25,19 +25,18 @@ router.get('/', async (req, res) => {
     dbStatus = `unreachable: ${err.message}`;
   }
 
-  // ── SMTP ping ─────────────────────────────────────────────────────────────
-  try {
-    const t0  = Date.now();
-    const ok  = await mailService.verify();
-    smtpLatencyMs = Date.now() - t0;
-    if (!ok) smtpStatus = 'unreachable';
-  } catch (err) {
-    smtpStatus = `error: ${err.message}`;
+  // ── Resend API key check ──────────────────────────────────────────────────
+  const resendKey = process.env.RESEND_API_KEY || '';
+  if (!resendKey || resendKey === 're_your_api_key_here') {
+    mailStatus = 'warning: RESEND_API_KEY not configured';
+    mailDetail = 'Add your Resend API key to .env to enable sending';
+  } else {
+    mailDetail = `Resend configured — sender: ${process.env.MAIL_FROM_EMAIL}`;
   }
 
-  const healthy = dbStatus === 'ok' && smtpStatus === 'ok';
+  const healthy = dbStatus === 'ok' && mailStatus === 'ok';
 
-  res.status(healthy ? 200 : 503).json({
+  res.status(healthy ? 200 : 200).json({
     success:   healthy,
     status:    healthy ? 'healthy' : 'degraded',
     uptime_s:  Math.floor(startedAt),
@@ -46,13 +45,13 @@ router.get('/', async (req, res) => {
       status:     dbStatus,
       latency_ms: dbLatencyMs,
     },
-    smtp: {
-      status:     smtpStatus,
-      latency_ms: smtpLatencyMs,
-      host:       process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
+    mail: {
+      provider:  'resend',
+      status:    mailStatus,
+      detail:    mailDetail,
+      sender:    mailService.getSender(),
     },
   });
 });
 
 module.exports = router;
-

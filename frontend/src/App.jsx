@@ -1,8 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import NavBar from './components/NavBar.jsx';
-import SendersPage from './pages/SendersPage.jsx';
-import RecipientsPage from './pages/RecipientsPage.jsx';
-import UploadLogsPage from './pages/UploadLogsPage.jsx';
+import MailingPage from './pages/MailingPage.jsx';
+import CampaignsPage from './pages/CampaignsPage.jsx';
 
 export default function App() {
   return (
@@ -11,10 +10,9 @@ export default function App() {
         <NavBar />
         <main className="page-content">
           <Routes>
-            <Route path="/"           element={<Navigate to="/senders" replace />} />
-            <Route path="/senders"    element={<SendersPage />} />
-            <Route path="/recipients" element={<RecipientsPage />} />
-            <Route path="/logs"       element={<UploadLogsPage />} />
+            <Route path="/"          element={<Navigate to="/mailing" replace />} />
+            <Route path="/mailing"   element={<MailingPage />} />
+            <Route path="/campaigns" element={<CampaignsPage />} />
           </Routes>
         </main>
       </div>
